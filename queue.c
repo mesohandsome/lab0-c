@@ -33,8 +33,8 @@ void q_free(struct list_head *l)
     list_for_each_safe (iterator, safe, l) {
         element_t *entry = list_entry(iterator, element_t, list);
 
-        free(entry->value);
         list_del(iterator);
+        free(entry->value);
         free(entry);
     }
 
@@ -53,8 +53,7 @@ bool q_insert_head(struct list_head *head, char *s)
 
     new_element->value = strdup(s);
     if (!new_element->value) {
-        free(new_element->value);
-        free(new_element);
+        q_release_element(new_element);
         return false;
     }
 
@@ -67,6 +66,21 @@ bool q_insert_head(struct list_head *head, char *s)
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
+    if (!s || !head)
+        return false;
+
+    element_t *new_element = (element_t *) malloc(sizeof(element_t));
+    if (!new_element)
+        return false;
+
+    new_element->value = strdup(s);
+    if (!new_element->value) {
+        q_release_element(new_element);
+        return false;
+    }
+
+    list_add_tail(&new_element->list, head);
+
     return true;
 }
 
