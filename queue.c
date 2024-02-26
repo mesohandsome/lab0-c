@@ -57,7 +57,6 @@ bool q_insert_head(struct list_head *head, char *s)
         return false;
     }
 
-    INIT_LIST_HEAD(&new_element->list);
     list_add(&new_element->list, head);
 
     return true;
@@ -102,9 +101,11 @@ int q_size(struct list_head *head)
     struct list_head *slow = head, *fast = head;
     int size = 0;
 
-    while (slow != fast) {
+    while (fast && fast->next) {
         slow = slow->next;
         fast = fast->next->next;
+        if (fast == slow)
+            break;
         size++;
     }
 
