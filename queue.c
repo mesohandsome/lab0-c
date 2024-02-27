@@ -112,12 +112,12 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 
     element_t *entry = list_last_entry(head, element_t, list);
 
-    list_del(&entry->list);
-
     if (sp && bufsize > 0) {
         strncpy(sp, entry->value, bufsize - 1);
         sp[bufsize - 1] = '\0';
     }
+
+    list_del(&entry->list);
 
     return entry;
 }
@@ -161,6 +161,34 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
+
+    if (!head || list_empty(head) || list_is_singular(head)) {
+        return false;  // 當鏈表為空、只有一個元素或只有頭節點時，不進行操作
+    }
+
+    struct list_head *current, *safe;
+    bool deleteFlag = false;
+
+    list_for_each_safe (current, safe, head) {
+        element_t *current_entry = list_entry(current, element_t, list);
+        element_t *next_entry = list_entry(safe, element_t, list);
+
+        if (safe != head &&
+            strcmp(current_entry->value, next_entry->value) == 0) {
+            deleteFlag = true;
+
+            list_del(&current_entry->list);
+            q_release_element(current_entry);
+        } else {
+            if (deleteFlag) {
+                deleteFlag = false;
+
+                list_del(&current_entry->list);
+                q_release_element(current_entry);
+            }
+        }
+    }
+
     return true;
 }
 
