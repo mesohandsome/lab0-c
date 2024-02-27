@@ -37,8 +37,7 @@ void q_free(struct list_head *l)
         element_t *entry = list_entry(iterator, element_t, list);
 
         list_del(iterator);
-        free(entry->value);
-        free(entry);
+        q_release_element(entry);
     }
 
     free(l);
@@ -165,7 +164,7 @@ bool q_delete_dup(struct list_head *head)
     }
 
     struct list_head *current, *safe;
-    bool deleteFlag = false;
+    bool delete_flag = false;
 
     list_for_each_safe (current, safe, head) {
         element_t *current_entry = list_entry(current, element_t, list);
@@ -173,13 +172,13 @@ bool q_delete_dup(struct list_head *head)
 
         if (safe != head &&
             strcmp(current_entry->value, next_entry->value) == 0) {
-            deleteFlag = true;
+            delete_flag = true;
 
             list_del(&current_entry->list);
             q_release_element(current_entry);
         } else {
-            if (deleteFlag) {
-                deleteFlag = false;
+            if (delete_flag) {
+                delete_flag = false;
 
                 list_del(&current_entry->list);
                 q_release_element(current_entry);
@@ -193,7 +192,22 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    // https://leetcode.com/problems/swap-nodes-in-pairs/
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    struct list_head *first = head->next, *second = first->next;
+
+    while (first != head && second != head) {
+        first->next = second->next;
+        second->next->prev = first;
+        second->next = first;
+        second->prev = first->prev;
+        first->prev->next = second;
+        first->prev = second;
+
+        first = first->next;
+        second = first->next;
+    }
 }
 
 /* Reverse elements in queue */
@@ -230,4 +244,12 @@ int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
     return 0;
+}
+
+void swap(struct list_head *first, struct list_head *second)
+{
+    first->next = second->next;
+    second->next = first;
+    second->prev = first->prev;
+    first->prev = second;
 }
