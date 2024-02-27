@@ -124,6 +124,9 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
+    if (!head || list_empty(head))
+        return 0;
+
     int size = 0;
     struct list_head *iterator;
 
@@ -192,7 +195,7 @@ bool q_delete_dup(struct list_head *head)
 /* Swap every two adjacent nodes */
 void q_swap(struct list_head *head)
 {
-    if (!head || list_empty(head) || list_is_singular(head))
+    if (!head || list_empty(head))
         return;
 
     struct list_head *first = head->next, *second = first->next;
@@ -230,7 +233,32 @@ void q_reverse(struct list_head *head)
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
 {
-    // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    int size = q_size(head);
+
+    if (!head || list_empty(head) || size < k)
+        return;
+
+    struct list_head *prev = head;
+    struct list_head *start = head->next, *current = head->next, *temp = NULL;
+
+    do {
+        int remain = k;
+        size -= k;
+
+        do {
+            temp = current->next;
+            current->next = current->prev;
+            current->prev = temp;
+
+            current = temp;
+            remain--;
+        } while (current != head && remain > 0);
+
+        current->prev->prev = prev;
+        prev->next = current->prev;
+        start->next = current;
+        prev = start;
+    } while (size > k);
 }
 
 /* Sort elements of queue in ascending/descending order */
@@ -258,12 +286,4 @@ int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
     return 0;
-}
-
-void swap(struct list_head *first, struct list_head *second)
-{
-    first->next = second->next;
-    second->next = first;
-    second->prev = first->prev;
-    first->prev = second;
 }
