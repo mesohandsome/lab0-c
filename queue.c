@@ -160,10 +160,8 @@ bool q_delete_mid(struct list_head *head)
 /* Delete all nodes that have duplicate string */
 bool q_delete_dup(struct list_head *head)
 {
-    // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-
     if (!head || list_empty(head) || list_is_singular(head)) {
-        return false;  // 當鏈表為空、只有一個元素或只有頭節點時，不進行操作
+        return false;
     }
 
     struct list_head *current, *safe;
