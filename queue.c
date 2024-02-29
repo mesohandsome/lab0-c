@@ -219,15 +219,10 @@ void q_reverse(struct list_head *head)
     if (!head || list_empty(head))
         return;
 
-    struct list_head *current = head, *temp = NULL;
+    struct list_head *current, *safe;
 
-    do {
-        temp = current->next;
-        current->next = current->prev;
-        current->prev = temp;
-
-        current = temp;
-    } while (current != head);
+    list_for_each_safe (current, safe, head)
+        list_move(current, head);
 }
 
 /* Reverse the nodes of the list k at a time */
