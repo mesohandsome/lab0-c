@@ -43,6 +43,18 @@
 #define ENOUGH_MEASURE 10000
 #define TEST_TRIES 10
 
+#define DUDECT_ENOUGH_MEASUREMENTS                                  \
+    (10000) /* do not draw any conclusion before we reach this many \
+               measurements */
+#define DUDECT_NUMBER_PERCENTILES (100)
+
+/* perform this many tests in total:
+   - 1 first order uncropped test,
+   - DUDECT_NUMBER_PERCENTILES tests
+   - 1 second order test
+*/
+#define DUDECT_TESTS (1 + DUDECT_NUMBER_PERCENTILES + 1)
+
 static t_context_t *t;
 
 /* threshold values for Welch's t-test */
@@ -50,6 +62,36 @@ enum {
     t_threshold_bananas = 500, /* Test failed with overwhelming probability */
     t_threshold_moderate = 10, /* Test failed */
 };
+
+static int cmp(const int64_t *a, const int64_t *b)
+{
+    return (int) (*a - *b);
+}
+
+static int64_t percentile(int64_t *a_sorted, double which, size_t size)
+{
+    size_t array_position = (size_t)((double) size * (double) which);
+    assert(array_position < size);
+    return a_sorted[array_position];
+}
+
+/*
+ set different thresholds for cropping measurements.
+ the exponential tendency is meant to approximately match
+ the measurements distribution, but there's not more science
+ than that.
+*/
+static void prepare_percentiles(int64_t *exec_times, int64_t *percentiles)
+{
+    qsort(exec_times, DUDECT_NUMBER_PERCENTILES, sizeof(int64_t),
+          (int (*)(const void *, const void *)) cmp);
+    for (size_t i = 0; i < DUDECT_NUMBER_PERCENTILES; i++) {
+        percentiles[i] = percentile(
+            exec_times,
+            1 - (pow(0.5, 10 * (double) (i + 1) / DUDECT_NUMBER_PERCENTILES)),
+            DUDECT_NUMBER_PERCENTILES);
+    }
+}
 
 static void __attribute__((noreturn)) die(void)
 {
@@ -118,24 +160,32 @@ static bool report(void)
 
 static bool doit(int mode)
 {
+    int64_t *percentiles =
+        calloc(DUDECT_NUMBER_PERCENTILES + 1, sizeof(int64_t));
     int64_t *before_ticks = calloc(N_MEASURES + 1, sizeof(int64_t));
     int64_t *after_ticks = calloc(N_MEASURES + 1, sizeof(int64_t));
     int64_t *exec_times = calloc(N_MEASURES, sizeof(int64_t));
     uint8_t *classes = calloc(N_MEASURES, sizeof(uint8_t));
     uint8_t *input_data = calloc(N_MEASURES * CHUNK_SIZE, sizeof(uint8_t));
 
-    if (!before_ticks || !after_ticks || !exec_times || !classes ||
-        !input_data) {
+    if (!percentiles || !before_ticks || !after_ticks || !exec_times ||
+        !classes || !input_data) {
         die();
     }
 
     prepare_inputs(input_data, classes);
-
     bool ret = measure(before_ticks, after_ticks, input_data, mode);
-    differentiate(exec_times, before_ticks, after_ticks);
-    update_statistics(exec_times, classes);
-    ret &= report();
+    bool first_time = percentiles[DUDECT_NUMBER_PERCENTILES - 1] == 0;
 
+    if (first_time) {
+        prepare_percentiles(exec_times, percentiles);
+    } else {
+        differentiate(exec_times, before_ticks, after_ticks);
+        update_statistics(exec_times, classes);
+        ret &= report();
+    }
+
+    free(percentiles);
     free(before_ticks);
     free(after_ticks);
     free(exec_times);
