@@ -221,6 +221,7 @@ void q_reverse(struct list_head *head)
 
     struct list_head *current, *safe;
 
+
     list_for_each_safe (current, safe, head)
         list_move(current, head);
 }
@@ -305,22 +306,21 @@ void q_sort(struct list_head *head, bool descend)
     merge(head, &left, &right, descend);
 }
 
-/* Remove every node which has a node with a strictly less value anywhere to
- * the right side of it */
-int q_ascend(struct list_head *head)
+int q_delete_right(struct list_head *head, bool descend)
 {
     if (!head || list_empty(head))
         return 0;
 
     struct list_head *ptr = head->prev;
     element_t *current_entry = list_entry(ptr, element_t, list);
-    char *current_min = current_entry->value;
+    char *current_value = current_entry->value;
 
     while (ptr != head && ptr->prev != head) {
         element_t *entry = list_entry(ptr->prev, element_t, list);
 
-        if (strcmp(entry->value, current_min) <= 0) {
-            current_min = entry->value;
+        if (descend ? strcmp(entry->value, current_value) >= 0
+                    : strcmp(entry->value, current_value) <= 0) {
+            current_value = entry->value;
             ptr = ptr->prev;
         } else {
             list_del(&entry->list);
@@ -331,29 +331,19 @@ int q_ascend(struct list_head *head)
     return q_size(head);
 }
 
+/* Remove every node which has a node with a strictly less value anywhere to
+ * the right side of it */
+int q_ascend(struct list_head *head)
+{
+    q_delete_right(head, false);
+    return q_size(head);
+}
+
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
 int q_descend(struct list_head *head)
 {
-    if (!head || list_empty(head))
-        return 0;
-
-    struct list_head *ptr = head->prev;
-    element_t *current_entry = list_entry(ptr, element_t, list);
-    char *current_max = current_entry->value;
-
-    while (ptr != head && ptr->prev != head) {
-        element_t *entry = list_entry(ptr->prev, element_t, list);
-
-        if (strcmp(entry->value, current_max) >= 0) {
-            current_max = entry->value;
-            ptr = ptr->prev;
-        } else {
-            list_del(&entry->list);
-            q_release_element(entry);
-        }
-    }
-
+    q_delete_right(head, true);
     return q_size(head);
 }
 
